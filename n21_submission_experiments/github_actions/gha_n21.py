@@ -50,8 +50,16 @@ def compiler() -> Path:
 
 
 def input_files(root: Path):
-    return sorted(p for p in root.rglob("*") if p.is_file() and (
-        p.suffix in (".ts", ".tsx") or p.name == "tsconfig.json"))
+    # Emitted *.d.ts are TypeScript files too, but are *outputs* under dist/.
+    # Including them would incorrectly treat a damaged declaration output as
+    # an input change and trigger a full clean fallback in guarded_sha.
+    files = [root / "tsconfig.json"]
+    for name in ("alpha", "beta"):
+        project = root / "packages" / name
+        files.append(project / "tsconfig.json")
+        files.extend(p for p in (project / "src").rglob("*")
+                     if p.is_file() and p.suffix in (".ts", ".tsx"))
+    return sorted(files)
 
 
 def input_digest(root: Path) -> str:
@@ -243,6 +251,8 @@ def local_smoke(metrics_path: Path) -> None:
                 rows.append(result)
                 if strategy in ("guarded_sha", "clean_all") and not result["correct_against_trusted_oracle"]:
                     raise AssertionError(f"Local smoke failed: {strategy}/{fault}")
+                if strategy == "guarded_sha" and result["input_rejected"]:
+                    raise AssertionError(f"Output damage misclassified as input drift: {fault}")
     put_json(metrics_path.resolve(), {"run_mode": "local script smoke, not GitHub Actions or Attest execution",
                                       "typescript": "5.9.3", "expected_rows": 16,
                                       "observations": rows})
