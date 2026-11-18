@@ -1,3 +1,4 @@
+# Runner replication marker 2 (no code or fixture change; same 14 cases).
 #!/usr/bin/env python3
 """GitHub Actions N21/Attest fixture (NOT a natural industrial incident).
 
