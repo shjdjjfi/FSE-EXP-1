@@ -40,14 +40,30 @@ def summarize(paths: list[Path]) -> dict:
     for strategy, rows in sorted(groups.items()):
         n = len(rows)
         good = sum(x["loader_ok"] for x in rows)
+        units = {}
+        for x in rows:
+            key = (x["source"], x["project"], x["os"])
+            units.setdefault(key, []).append(x)
+        # One project lock gets patched once, even when e.g. Cloudreve contains
+        # three native parents. Counting 87 version edits three times would
+        # triple a single lockfile's cost and create pseudo-replication.
+        lock_churn = sum(group[0]["version_churn"] or 0 for group in units.values())
+        unit_good = sum(all(v["loader_ok"] for v in group) for group in units.values())
+        unit_ci_ok = sum(all(v["ci_ok"] for v in group) for group in units.values())
         summary[strategy] = {"n_package_host_cells": n,
                              "native_loader_success_n": good,
                              "native_loader_success_rate": round(good / n, 4) if n else None,
-                             "wilson_95_ci": wilson(good, n),
-                             "npm_ci_success_n": sum(x["ci_ok"] for x in rows),
-                             "npm_ci_legacy_peer_fallback_n": sum(x["ci_peer_fallback"] for x in rows),
-                             "treatment_legacy_peer_fallback_n": sum(x["treatment_peer_fallback"] for x in rows),
-                             "non_target_version_churn_total": sum(x["version_churn"] or 0 for x in rows)}
+                             "native_loader_wilson_95_ci_naive": wilson(good, n),
+                             "n_unique_project_host_lockfiles": len(units),
+                             "all_native_parents_pass_n": unit_good,
+                             "all_native_parents_pass_fraction": round(unit_good / len(units), 4) if units else None,
+                             "all_parents_wilson_95_ci": wilson(unit_good, len(units)),
+                             "unique_project_host_npm_ci_ok_n": unit_ci_ok,
+                             "unique_project_host_ci_legacy_peer_fallback_n": sum(
+                                 group[0]["ci_peer_fallback"] for group in units.values()),
+                             "unique_project_host_treatment_legacy_peer_fallback_n": sum(
+                                 group[0]["treatment_peer_fallback"] for group in units.values()),
+                             "non_target_version_churn_unique_lockfiles_total": lock_churn}
     pair_index = {}
     for c in cells:
         pair_index.setdefault((c["source"], c["project"], c["family"], c["os"]), {})[c["strategy"]] = c
@@ -65,13 +81,16 @@ def summarize(paths: list[Path]) -> dict:
                           "baseline_loader_ok": unmodified["loader_ok"],
                           "strategy_loader_ok": b["loader_ok"],
                           "non_target_version_churn": b["version_churn"]})
+    unique_units = {(x["source"], x["project"], x["os"]) for x in cells}
     return {"scope": "three public project locks pinned to immutable commits, replayed today; NOT natural CI failure logs",
             "n_files": len(sources), "n_project_host_parent_cells": len(pair_index),
+            "n_unique_project_host_lockfiles": len(unique_units),
             "sources": sources, "errors": errors, "strategy_summary": summary,
             "paired_comparisons": pairs, "all_cells": cells,
             "caveats": ["Project sampling was conditioned on finding a missing lock entry in the exploratory audit",
                         "Native dependency execution was tested; original project build/test and historical CI logs were not",
                         "Ignoring lifecycle scripts prevents unsafe arbitrary install-time execution but changes full-project behavior",
+                        "Unique-lockfile version churn is deduplicated across multiple native parents of one project",
                         "Legacy-peer-deps retries are separately labeled and cannot be equated with default npm ci",
                         "Package families within a single project/host are correlated; descriptive rates are not ecosystem estimates"]}
 
