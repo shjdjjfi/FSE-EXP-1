@@ -2,6 +2,13 @@
 
 **Status: executable public-case replication package; NOT a complete FSE Industry Track submission evaluation.**
 
+**2026-11-18 additional independent validation:** A separately executed
+[Django 6.0.0 permission regression and OpenCode v2.0.19 V1 data-loss replay](ADDENDUM_DJANGO_OPENCODE_20261118.md)
+has been added under [`addenda/20261118_django_opencode/`](addenda/20261118_django_opencode/README.md).
+This adds two *different upstream projects* to the original Open WebUI/Drizzle
+study. Their case counts are kept separate because case selection, units, and
+control definitions differ; do not pool their rates as independent incidents.
+
 This repository branch contains isolated N22 work. It leaves the repository's
 N21 work on its separate branch untouched. The study asks when the same final
 database schema and version ledger can conceal divergent application data.

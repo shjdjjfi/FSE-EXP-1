@@ -9,5 +9,7 @@ The N21 TypeScript build-output experiments belong to the separate
 
 Read the [N22 experimental report](N22/EXPERIMENT_REPORT.md) and
 [evidence gaps](N22/SUBMISSION_GAPS.md) before reusing any numbers.
+Additional Django 6.0/OpenCode experiments are indexed in the
+[November 18 addendum](N22/ADDENDUM_DJANGO_OPENCODE_20261118.md).
 This is controlled research on public source and synthetic inputs, not a
 claim of access to production databases or measured industrial incidents.
